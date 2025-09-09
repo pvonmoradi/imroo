@@ -1,0 +1,112 @@
+#!/usr/bin/env sh
+#
+# Author: Pooya Moradi
+# Date : 1401-01-22
+#
+# Description: A simple script for Iranian and international calendar events
+#
+# Dependencies: jq curl date jdate
+
+# TODO ical is not found in ubuntu (hijri cal is not used)
+
+show_help() {
+    cat << EOF
+Usage: cal-events [-s] [-h]
+DESCRIPTION
+    cal-events: prints Iranian/international calendar events for current day.
+
+OPTIONS
+    (OPTIONAL) [-s]
+        Syncs database json by downloading files from internet.
+    (OPTIONAL) [-h help]
+        Display the help message.
+
+NOTES
+
+EXAMPLES
+    # sync before first use
+    cal-events -s
+    # get events for current day
+    cal-events
+EOF
+}
+
+sync() {
+    printf >&2 "[INFO] Syncing database in %s\n" "$data_dir"
+    mkdir --parents "$data_dir"
+    db_link_base="https://github.com/persiancal/cal-events/raw/gh-pages"
+    jalali_link="$db_link_base/jalali.json"
+    hijri_link="$db_link_base/hijri.json"
+    gregorian_link="$db_link_base/gregorian.json"
+    if ! curl -# --fail --location "$jalali_link" --output "$jalali"; then
+        printf >&2 "[ERROR] Problem in downloading %s\n" "$jalali_link"
+        return 1
+    fi
+    if ! curl -# --fail --location "$hijri_link" --output "$hijri"; then
+        printf >&2 "[ERROR] Problem in downloading %s\n" "$hijri_link"
+        return 1
+    fi
+    if ! curl -# --fail --location "$gregorian_link" --output "$gregorian"; then
+        printf >&2 "[ERROR] Problem in downloading %s\n" "$gregorian_link"
+        return 1
+    fi
+    printf '%s\n' "$data_dir/"*
+    printf >&2 "[INFO] Done syncing\n"
+    return 0
+}
+
+# global variables
+data_dir="${XDG_DATA_HOME:-$HOME/.local/share}/cal-events"
+jalali="$data_dir/jalali.json"
+hijri="$data_dir/hijri.json"
+gregorian="$data_dir/gregorian.json"
+
+while getopts sh opt; do
+    case $opt in
+        h)
+            show_help >&1
+            exit 0
+            ;;
+        s)
+            sync
+            exit "$?"
+            ;;
+        *)
+            printf >&2 "[ERROR] Bad usage!\n"
+            show_help >&2
+            exit 2
+            ;;
+
+    esac
+done
+shift "$((OPTIND - 1))"
+if [ -n "$1" ]; then
+    printf >&2 "[ERROR] Bad usage! cal-events takes no argument\n"
+    show_help >&2
+fi
+
+# check if db json files exist
+if [ ! -f "$jalali" ] || [ ! -f "$hijri" ] || [ ! -f "$gregorian" ]; then
+    printf >&2 "[ERROR] Database not found. Sync first (-s)\n"
+    exit 1
+fi
+
+gregorian_date=$(date '+%Y/%m/%d')
+read -r month day << END
+$(jdate '+%m %d' --jalali "$gregorian_date")
+END
+if ! jq --raw-output --argjson m "$month" --argjson d "$day" \
+    '.events | map (select(.month == $m and .day == $d)) [] | .title.fa_IR' \
+    "$jalali"; then
+    printf >&2 "[ERROR] Filtering %s failed\n" "$jalali"
+    exit 1
+fi
+read -r month day << END
+$(date '+%m %d')
+END
+if ! jq --raw-output --argjson m "$month" --argjson d "$day" \
+    '.events | map (select(.month == $m and .day == $d)) [] | .title.fa_IR' \
+    "$gregorian"; then
+    printf >&2 "[ERROR] Filtering %s failed\n" "$gregorian"
+    exit 1
+fi
