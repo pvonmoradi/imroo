@@ -113,7 +113,9 @@ END
         --arg cal "$_cal" \
         --argjson m "$month" --argjson d "$day" \
         '.[$cal] | map (select(.month == $m and .day == $d and
-                              (.type == "Iran" or .type == "International"))) []
+                              (.type == "Iran" or
+                               .type == "International" or
+                               .type == "AncientIran"))) []
                  as $m
                  | (if $m.holiday
                     then ($m.title + " (تعطیل)")
