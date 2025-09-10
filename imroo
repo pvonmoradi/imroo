@@ -18,7 +18,7 @@ imroo: shows Iranian/international calendar events for current day or
 
 Usage: imroo [OPTIONS]
 Options:
-    -s      Sync database json by downloading files from internet
+    -s      Sync database by downloading the json file from internet
     -d      Number of days into future from today (including today)
     -V      Print script version
     -h      Display the help message
@@ -127,7 +127,7 @@ END
 }
 
 # global variables
-version=0.4
+version=0.5
 data_dir="${XDG_DATA_HOME:-$HOME/.local/share}/imroo"
 events="$data_dir/events.json"
 db_link="https://github.com/persian-calendar/persian-calendar/raw/refs/heads/main/PersianCalendar/data/events.json"
