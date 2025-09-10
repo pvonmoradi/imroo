@@ -73,6 +73,25 @@ zenity --width=600 --height=800 --title="مناسبت‌های روزهای آی
   <img width="300" src="docs/imroo-zenity.jpg">
 </p>
 
+# Known issues
+- For some days, the Hijri/Ghamari date, as calculated by `idate`, differs from
+  what Iranian calendars consider to be the correct Hijri/Ghamari date. Hence,
+  some Hijri events **may** have an off-by-one error for their date. Possibly
+  [related issue
+  here](https://github.com/persian-calendar/persian-calendar/issues/53).
+  
+  Here is a problematic case: 22 dec 2025 is considered to be the 1st of Rajab
+  according to [time.ir](https://www.time.ir/), but `idate` (from Debian 13)
+  calculates it to the 2nd of Rajab.
+  
+```console
+$ idate --gregorian 20251222
+Date Format (dd/mm/yyyy):
++ Input    : 22/12/2025      -     Monday(Mon) -     December(Dec)
+-----------------------------
++ Output   :  2/ 7/1447 A.H  -    Ithnain(Ith) -        Rajab(Raj)
+```
+
 # Development
 - linter: `shellcheck`
 - formatter: `shfmt -i 4 -bn -ci -sr`
