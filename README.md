@@ -1,4 +1,4 @@
-# cal-events
+# imroo
 A simple script to show Iranian calendar events for today or next days
 
 ## Dependencies
@@ -17,14 +17,14 @@ sudo apt install curl jq itools
 ```
 
 # Usage
-Check `cal-events -h`:
+Check `imroo -h`:
 
 ```console
-$ cal-events -h
-cal-events: shows Iranian/international calendar events for current day or
+$ imroo -h
+imroo: shows Iranian/international calendar events for current day or
             future days
 
-Usage: cal-events [OPTIONS]
+Usage: imroo [OPTIONS]
 Options:
     -s      Sync database json by downloading files from internet
     -d      Number of days into future from today (including today)
@@ -33,11 +33,11 @@ Options:
 
 Examples:
     # sync before first use
-    cal-events -s
+    imroo -s
     # get events for current day
-    cal-events
+    imroo
     # get events for today, tomorrow, and the day after tomorrow
-    cal-events -d3
+    imroo -d3
 ```
 
 As another example, the script can be used with
@@ -49,7 +49,7 @@ As another example, the script can be used with
 
 notify-send -i "calendar" \
     "$(jdate +%E | cut -d- -f1)" \
-    "$(cal-events -d1 \
+    "$(imroo -d1 \
     | awk '/تعطیل/{print "<span fgcolor=\"red\">" $0 "</span>"; next} {print}')"
 ```
 

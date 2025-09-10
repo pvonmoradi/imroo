@@ -13,10 +13,10 @@
 
 show_help() {
     cat << EOF
-cal-events: shows Iranian/international calendar events for current day or
+imroo: shows Iranian/international calendar events for current day or
             future days
 
-Usage: cal-events [OPTIONS]
+Usage: imroo [OPTIONS]
 Options:
     -s      Sync database json by downloading files from internet
     -d      Number of days into future from today (including today)
@@ -25,11 +25,11 @@ Options:
 
 Examples:
     # sync before first use
-    cal-events -s
+    imroo -s
     # get events for current day
-    cal-events
+    imroo
     # get events for today, tomorrow, and the day after tomorrow
-    cal-events -d3
+    imroo -d3
 EOF
 }
 
@@ -128,7 +128,7 @@ END
 
 # global variables
 version=0.4
-data_dir="${XDG_DATA_HOME:-$HOME/.local/share}/cal-events"
+data_dir="${XDG_DATA_HOME:-$HOME/.local/share}/imroo"
 events="$data_dir/events.json"
 db_link="https://github.com/persian-calendar/persian-calendar/raw/refs/heads/main/PersianCalendar/data/events.json"
 days=1
@@ -160,7 +160,7 @@ while getopts sVhd: opt; do
 done
 shift "$((OPTIND - 1))"
 if [ -n "$1" ]; then
-    log error "Bad usage! cal-events takes no arguments. Check help (-h)"
+    log error "Bad usage! imroo takes no arguments. Check help (-h)"
     exit 2
 fi
 
