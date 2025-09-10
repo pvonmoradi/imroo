@@ -40,7 +40,7 @@ Examples:
     imroo -d3
 ```
 
-As another example, the script can be used with
+- As another example, the script can be used with
 [dunst](https://dunst-project.org/documentation/#COLORS) implementation of
 `notify-send` like this:
 
@@ -51,6 +51,17 @@ notify-send -i "calendar" \
     "$(jdate +%E | cut -d- -f1)" \
     "$(imroo -d1 \
     | awk '/تعطیل/{print "<span fgcolor=\"red\">" $0 "</span>"; next} {print}')"
+```
+
+- The output string would be in UTF-8 Persian characters. Use terminal emulators
+  that support RTL like [Konsole](https://konsole.kde.org/) to test the
+  script. If the script is piped into GUI apps, it is expected that they render
+  the output correctly. For example using
+  [zenity](https://gitlab.gnome.org/GNOME/zenity):
+
+```bash
+zenity --width=600 --height=800 --title="مناسبت‌های روزهای آینده" \
+       --text-info --filename=<(imroo -d 10)
 ```
 
 # Development
