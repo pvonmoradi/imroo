@@ -2,8 +2,8 @@
 A simple script to show Iranian calendar events for today or next days
 
 ## Dependencies
-- jdate : Iranian/Persian/Jalali/Shamsi date
-- idate : Hijri date
+- [jdate](https://github.com/persiancal/jcal) : Iranian/Persian/Jalali/Shamsi date
+- [idate](https://tracker.debian.org/pkg/itools) : Hijri date
 - date : (GNU) Gregorian date
 - curl
 - jq
@@ -12,7 +12,7 @@ In a Debian-like distro:
 
 ```bash
 sudo apt install curl jq itools
-# jdate needs to be manually built, the one in Debian 13 is old/buggy
+# jdate needs to be manually built from master, the one in Debian 13 is buggy
 # https://github.com/persiancal/jcal
 ```
 
@@ -26,7 +26,7 @@ imroo: shows Iranian/international calendar events for current day or
 
 Usage: imroo [OPTIONS]
 Options:
-    -s      Sync database json by downloading files from internet
+    -s      Sync database by downloading the json file from internet
     -d      Number of days into future from today (including today)
     -V      Print script version
     -h      Display the help message
@@ -53,16 +53,25 @@ notify-send -i "calendar" \
     | awk '/تعطیل/{print "<span fgcolor=\"red\">" $0 "</span>"; next} {print}')"
 ```
 
+<p align="center">
+  <img width="400"src="docs/imroo-dunst.jpg">
+</p>
+
 - The output string would be in UTF-8 Persian characters. Use terminal emulators
   that support RTL like [Konsole](https://konsole.kde.org/) to test the
   script. If the script is piped into GUI apps, it is expected that they render
   the output correctly. For example using
-  [zenity](https://gitlab.gnome.org/GNOME/zenity):
+  [zenity](https://help.gnome.org/users/zenity/stable/):
+  
 
 ```bash
 zenity --width=600 --height=800 --title="مناسبت‌های روزهای آینده" \
        --text-info --filename=<(imroo -d 10)
 ```
+
+<p align="center">
+  <img width="300" src="docs/imroo-zenity.jpg">
+</p>
 
 # Development
 - linter: `shellcheck`
