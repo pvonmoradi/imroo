@@ -54,7 +54,7 @@ notify-send -i "calendar" \
 ```
 
 <p align="center">
-  <img width="400"src="docs/imroo-dunst.jpg">
+  <img width="350"src="docs/imroo-dunst.jpg">
 </p>
 
 - The output string would be in UTF-8 Persian characters. Use terminal emulators

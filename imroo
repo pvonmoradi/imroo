@@ -103,6 +103,7 @@ get_month_day() {
     esac
 }
 
+# deprecated
 get_event() {
     _cal="$1"
     read -r month day << END
@@ -126,13 +127,62 @@ END
     fi
 }
 
+get_events() {
+    # json array
+    _keys="["
+    for _cal in $calendars; do
+        _cal="$_cal Calendar"
+        if ! _result=$(get_month_day "$_cal"); then
+            log error "Failed to get month/day for $_cal. Skipping..."
+            continue
+        fi
+        read -r month day << EOF
+        $_result
+EOF
+
+        # manually form the json element
+        _key_json=$(
+            cat << EOF
+{"calendar": "$_cal", "month": $month, "day": $day}
+EOF
+        )
+        _keys="$_keys$_key_json,"
+    done
+    # remove last comma
+    _keys=$(printf '%s' "$_keys" | sed 's/,$//')
+    _keys="$_keys]"
+
+    if ! jq --raw-output \
+        --argjson keys "$_keys" \
+        --arg country "$country" \
+        'def get_event(cal; m; d):
+             .[cal] | map (select(.month == m and .day == d and
+                                 (.type == $country or
+                                  .type == "International" or
+                                  .type == "AncientIran"))) []
+              as $event
+              | (if $event.holiday
+                 then ($event.title + " (تعطیل)")
+                 else $event.title end);
+         . as $events
+         | $keys[] as $key
+         | $events | get_event($key.calendar; $key.month; $key.day)' \
+        "$events"; then
+        log error "Filtering $events failed"
+        exit 1
+    fi
+}
+
 # global variables
-version=0.5
+version=0.6
 data_dir="${XDG_DATA_HOME:-$HOME/.local/share}/imroo"
 events="$data_dir/events.json"
 db_link="https://github.com/persian-calendar/persian-calendar/raw/refs/heads/main/PersianCalendar/data/events.json"
 days=1
 offset=0
+# desired calendars, mind the spaces and capitalizations
+calendars="Persian Hijri Gregorian"
+country="Iran"
 
 while getopts sVhd: opt; do
     case $opt in
@@ -173,22 +223,18 @@ if [ ! -f "$events" ]; then
 fi
 
 if [ "$days" -eq 1 ]; then
-    get_event "Persian Calendar"
-    get_event "Hijri Calendar"
-    get_event "Gregorian Calendar"
+    get_events
     exit
 fi
 
 while [ "$days" -gt 0 ]; do
-    week_day=$(jdate '+%G' --jalali "$(date '+%Y/%m/%d' -d "+$offset days")")
-    month_day=$(jdate '+%W' --jalali "$(date '+%Y/%m/%d' -d "+$offset days")" | cut -d/ -f3)
-    printf "«%s, %s»\n" "$week_day" "$month_day"
+    day_str=$(jdate '+%E' --jalali "$(date '+%Y/%m/%d' -d "+$offset days")" \
+        | awk -F '،' '{print $1}')
+    printf "«%s»\n" "$day_str"
 
-    get_event "Persian Calendar"
-    get_event "Hijri Calendar"
-    get_event "Gregorian Calendar"
+    get_events
 
     days=$((days - 1))
     offset=$((offset + 1))
-    printf "——————————————\n"
+    printf "————————————————\n"
 done
