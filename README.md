@@ -1,5 +1,6 @@
 # imroo
-A simple script to show Iranian calendar events for today or next days
+A simple script to show Iranian calendar events for a given date
+range. Basically, the script is a filter over a JSON db.
 
 ## Dependencies
 - [jdate](https://github.com/persiancal/jcal) : Iranian/Persian/Jalali/Shamsi date
@@ -21,16 +22,18 @@ Check `imroo -h`:
 
 ```console
 $ imroo -h
-imroo: shows Iranian/international calendar events for current day or
-            future days
+imroo: show Iranian/international calendar events for a date
 
-Usage: imroo [OPTIONS]
+Usage: imroo [OPTIONS] [DATE]
+Arguments:
+    [DATE]    Get events at given DATE (in Y/M/D format, Persian calendar)
+              If empty, it is set to today
 Options:
-    -s       Sync database by downloading the json file from internet
-    -d NUM   Number of days into future from today (including today)
-    -j       Use JSON as output format
-    -V       Print script version
-    -h       Display the help message
+    -s        Sync database by downloading the json file from internet
+    -d NUM    Number of days into future starting from DATE (including)
+    -j        Use JSON as output format
+    -V        Print script version
+    -h        Display the help message
 
 Examples:
     # sync before first use
@@ -39,6 +42,9 @@ Examples:
     imroo
     # get events for today, tomorrow, and the day after tomorrow
     imroo -d3
+    # get events starting from 1404-11-10, and 5 days after it, in json
+    imroo -j -d 6 "1404/11/10"
+
 ```
 
 - As another example, the script can be used with
@@ -55,7 +61,7 @@ notify-send -i "calendar" \
 ```
 
 <p align="center">
-  <img width="350"src="docs/imroo-dunst.jpg">
+  <img width="300"src="docs/imroo-dunst.jpg">
 </p>
 
 - The output string would be in UTF-8 Persian characters. Use terminal emulators
@@ -92,6 +98,8 @@ Date Format (dd/mm/yyyy):
 -----------------------------
 + Output   :  2/ 7/1447 A.H  -    Ithnain(Ith) -        Rajab(Raj)
 ```
+
+- Irregular recurring events are not handled.
 
 # Development
 - linter: `shellcheck`

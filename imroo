@@ -7,22 +7,24 @@
 # Description: A simple script to fetch Iranian and international calendar
 #              events
 #
-# Dependencies: jq curl date jdate idate awk grep cut
+# Dependencies: jq curl date jdate idate awk grep cut tr
 
 # TODO
 
 show_help() {
     cat << EOF
-imroo: shows Iranian/international calendar events for current day or
-            future days
+imroo: show Iranian/international calendar events for a date
 
-Usage: imroo [OPTIONS]
+Usage: imroo [OPTIONS] [DATE]
+Arguments:
+    [DATE]    Get events at given DATE (in Y/M/D format, Persian calendar)
+              If empty, it is set to today
 Options:
-    -s       Sync database by downloading the json file from internet
-    -d NUM   Number of days into future from today (including today)
-    -j       Use JSON as output format
-    -V       Print script version
-    -h       Display the help message
+    -s        Sync database by downloading the json file from internet
+    -d NUM    Number of days into future starting from DATE (including)
+    -j        Use JSON as output format
+    -V        Print script version
+    -h        Display the help message
 
 Examples:
     # sync before first use
@@ -31,6 +33,8 @@ Examples:
     imroo
     # get events for today, tomorrow, and the day after tomorrow
     imroo -d3
+    # get events starting from 1404-11-10, and 5 days after it, in json
+    imroo -j -d 6 "1404/11/10"
 EOF
 }
 
@@ -90,16 +94,18 @@ sync() {
 get_month_day() {
     case "$1" in
         "Persian Calendar")
-            jdate '+%m %d' --jalali "$(date '+%Y/%m/%d' -d "+$offset days")"
+            jdate '+%m %d' --jalali \
+                "$(date '+%Y/%m/%d' -d "$start_date + $offset days")"
             ;;
         "Hijri Calendar")
-            idate --gregorian "$(date '+%Y%m%d' -d "+$offset days")" \
+            idate --gregorian \
+                  "$(date '+%Y%m%d' -d "$start_date + $offset days")" \
                 | grep Output \
                 | grep -o '[0-9]\+/[[:space:]]*[0-9]\+/[0-9]\+' \
                 | awk -F/ '{print $2, $1}'
             ;;
         "Gregorian Calendar")
-            date '+%m %d' -d "+$offset days"
+            date '+%m %d' -d "$start_date + $offset days"
             ;;
     esac
 }
@@ -156,7 +162,7 @@ EOF
     # for -j mode, prepare a ISO (implying Gregorian) date
     iso_date=""
     if [ $out_json -eq 1 ]; then
-        iso_date=$(date '+%Y-%m-%d' -d "+$offset days")
+        iso_date=$(date '+%Y-%m-%d' -d "$start_date + $offset days")
     fi
 
     if ! jq --raw-output \
@@ -188,13 +194,14 @@ EOF
 }
 
 # global variables
-version=0.7
+version=0.8
 data_dir="${XDG_DATA_HOME:-$HOME/.local/share}/imroo"
 events="$data_dir/events.json"
 db_link="https://github.com/persian-calendar/persian-calendar/raw/refs/heads/main/PersianCalendar/data/events.json"
 days=1
 offset=0
 out_json=0
+start_date=""
 # desired calendars, mind the spaces and capitalizations
 calendars="Persian Hijri Gregorian"
 country="Iran"
@@ -227,9 +234,11 @@ while getopts sVhjd: opt; do
     esac
 done
 shift "$((OPTIND - 1))"
+
 if [ -n "$1" ]; then
-    log error "Bad usage! imroo takes no arguments. Check help (-h)"
-    exit 2
+    date_arg="$1"
+    date_arg=$(printf "%s" "$date_arg" | tr '-' '/')
+    start_date="$(jdate --gregorian="$date_arg")"
 fi
 
 check_deps jq curl jdate idate date
@@ -259,7 +268,8 @@ if [ "$days" -eq 1 ]; then
 fi
 
 while [ "$days" -gt 0 ]; do
-    day_str=$(jdate '+%E' --jalali "$(date '+%Y/%m/%d' -d "+$offset days")" \
+    day_str=$(jdate '+%E' --jalali \
+                    "$(date '+%Y/%m/%d' -d "$start_date + $offset days")" \
         | awk -F '،' '{print $1}')
     printf "«%s»\n" "$day_str"
 
