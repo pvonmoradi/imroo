@@ -26,10 +26,11 @@ imroo: shows Iranian/international calendar events for current day or
 
 Usage: imroo [OPTIONS]
 Options:
-    -s      Sync database by downloading the json file from internet
-    -d      Number of days into future from today (including today)
-    -V      Print script version
-    -h      Display the help message
+    -s       Sync database by downloading the json file from internet
+    -d NUM   Number of days into future from today (including today)
+    -j       Use JSON as output format
+    -V       Print script version
+    -h       Display the help message
 
 Examples:
     # sync before first use

@@ -18,10 +18,11 @@ imroo: shows Iranian/international calendar events for current day or
 
 Usage: imroo [OPTIONS]
 Options:
-    -s      Sync database by downloading the json file from internet
-    -d      Number of days into future from today (including today)
-    -V      Print script version
-    -h      Display the help message
+    -s       Sync database by downloading the json file from internet
+    -d NUM   Number of days into future from today (including today)
+    -j       Use JSON as output format
+    -V       Print script version
+    -h       Display the help message
 
 Examples:
     # sync before first use
@@ -152,18 +153,31 @@ EOF
     _keys=$(printf '%s' "$_keys" | sed 's/,$//')
     _keys="$_keys]"
 
+    # for -j mode, prepare a ISO (implying Gregorian) date
+    iso_date=""
+    if [ $out_json -eq 1 ]; then
+        iso_date=$(date '+%Y-%m-%d' -d "+$offset days")
+    fi
+
     if ! jq --raw-output \
         --argjson keys "$_keys" \
         --arg country "$country" \
+        --argjson out_json "$out_json" \
+        --arg iso_date "$iso_date" \
         'def get_event(cal; m; d):
              .[cal] | map (select(.month == m and .day == d and
                                  (.type == $country or
                                   .type == "International" or
                                   .type == "AncientIran"))) []
               as $event
-              | (if $event.holiday
-                 then ($event.title + " (تعطیل)")
-                 else $event.title end);
+              | if ($out_json == 1)
+                then
+                  $event + {"calendar" : cal} + {"iso_date": $iso_date}
+                else
+                  if $event.holiday
+                  then ($event.title + " (تعطیل)")
+                  else $event.title end
+                end;
          . as $events
          | $keys[] as $key
          | $events | get_event($key.calendar; $key.month; $key.day)' \
@@ -174,20 +188,25 @@ EOF
 }
 
 # global variables
-version=0.6
+version=0.7
 data_dir="${XDG_DATA_HOME:-$HOME/.local/share}/imroo"
 events="$data_dir/events.json"
 db_link="https://github.com/persian-calendar/persian-calendar/raw/refs/heads/main/PersianCalendar/data/events.json"
 days=1
 offset=0
+out_json=0
 # desired calendars, mind the spaces and capitalizations
 calendars="Persian Hijri Gregorian"
 country="Iran"
 
-while getopts sVhd: opt; do
+while getopts sVhjd: opt; do
     case $opt in
         h)
             show_help
+            exit
+            ;;
+        V)
+            printf "%s\n" "$version"
             exit
             ;;
         s)
@@ -197,9 +216,8 @@ while getopts sVhd: opt; do
         d)
             days="$OPTARG"
             ;;
-        V)
-            printf "%s\n" "$version"
-            exit
+        j)
+            out_json=1
             ;;
         *)
             log error "Bad usage! Check help (-h)"
@@ -222,6 +240,19 @@ if [ ! -f "$events" ]; then
     exit 1
 fi
 
+# handle output json format
+if [ $out_json -eq 1 ]; then
+    e_json_stream=""
+    while [ "$days" -gt 0 ]; do
+        e_json_stream="$e_json_stream$(get_events)"
+        days=$((days - 1))
+        offset=$((offset + 1))
+    done
+    printf "%s" "$e_json_stream" | jq --slurp
+    exit
+fi
+
+# handle output text format
 if [ "$days" -eq 1 ]; then
     get_events
     exit
