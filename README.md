@@ -1,6 +1,7 @@
 # imroo
 A simple script to show Iranian calendar events for a given date
-range. Basically, the script is a filter over a JSON db.
+range. Basically, the script is a filter over an [events JSON
+database](https://github.com/persian-calendar/persian-calendar/blob/main/PersianCalendar/data/events.json).
 
 ## Dependencies
 - [jdate](https://github.com/persiancal/jcal) : Iranian/Persian/Jalali/Shamsi date
