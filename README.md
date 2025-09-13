@@ -4,7 +4,7 @@ range. Basically, the script is a filter over an [events JSON
 database](https://github.com/persian-calendar/persian-calendar/blob/main/PersianCalendar/data/events.json).
 
 ## Dependencies
-- [jdate](https://github.com/persiancal/jcal) : Iranian/Persian/Jalali/Shamsi date
+- [jdate jcal](https://github.com/persiancal/jcal) : Iranian/Persian/Jalali/Shamsi date
 - [idate](https://tracker.debian.org/pkg/itools) : Hijri date
 - date : (GNU) Gregorian date
 - curl
@@ -14,7 +14,7 @@ In a Debian-like distro:
 
 ```bash
 sudo apt install curl jq itools
-# jdate needs to be manually built from master, the one in Debian 13 is buggy
+# jdate/jcal needs to be manually built from master, the one in Debian 13 is buggy
 # https://github.com/persiancal/jcal
 ```
 

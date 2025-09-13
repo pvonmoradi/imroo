@@ -7,7 +7,7 @@
 # Description: A simple script to fetch Iranian and international calendar
 #              events
 #
-# Dependencies: jq curl date jdate idate awk grep cut tr
+# Dependencies: jq curl date jdate jcal idate awk grep cut tr
 
 # TODO
 
@@ -306,7 +306,7 @@ EOF
 }
 
 # global variables
-version=0.10
+version=0.11
 data_dir="${XDG_DATA_HOME:-$HOME/.local/share}/imroo"
 events="$data_dir/events.json"
 db_link="https://github.com/persian-calendar/persian-calendar/raw/refs/heads/main/PersianCalendar/data/events.json"
@@ -353,7 +353,7 @@ if [ -n "$1" ]; then
     start_date="$(jdate --gregorian="$date_arg")"
 fi
 
-check_deps jq curl jdate idate date
+check_deps jq curl jdate jcal idate date
 
 # check if db json file exists
 if [ ! -f "$events" ]; then
