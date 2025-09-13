@@ -91,21 +91,21 @@ sync() {
     log info "Done syncing"
 }
 
-get_month_day() {
+get_date_in_cal() {
     case "$1" in
         "Persian Calendar")
-            jdate '+%m %d' --jalali \
+            jdate '+%Y %m %d' --jalali \
                 "$(date '+%Y/%m/%d' -d "$start_date + $offset days")"
             ;;
         "Hijri Calendar")
             idate --gregorian \
-                  "$(date '+%Y%m%d' -d "$start_date + $offset days")" \
+                "$(date '+%Y%m%d' -d "$start_date + $offset days")" \
                 | grep Output \
                 | grep -o '[0-9]\+/[[:space:]]*[0-9]\+/[0-9]\+' \
-                | awk -F/ '{print $2, $1}'
+                | awk -F/ '{$2 = $2 + 0; print $3, $2, $1}'
             ;;
         "Gregorian Calendar")
-            date '+%m %d' -d "$start_date + $offset days"
+            date '+%Y %m %d' -d "$start_date + $offset days"
             ;;
     esac
 }
@@ -113,8 +113,8 @@ get_month_day() {
 # deprecated
 get_event() {
     _cal="$1"
-    read -r month day << END
-$(get_month_day "$_cal")
+    read -r year month day << END
+$(get_date_in_cal "$_cal")
 END
 
     if ! jq --raw-output \
@@ -135,25 +135,42 @@ END
 }
 
 get_events() {
+    year=""
+    month=""
+    day=""
+    ch_soori=""
     # json array
     _keys="["
     for _cal in $calendars; do
         _cal="$_cal Calendar"
-        if ! _result=$(get_month_day "$_cal"); then
+        if ! _result=$(get_date_in_cal "$_cal"); then
             log error "Failed to get month/day for $_cal. Skipping..."
             continue
         fi
-        read -r month day << EOF
+        read -r year month day << EOF
         $_result
 EOF
 
         # manually form the json element
         _key_json=$(
             cat << EOF
-{"calendar": "$_cal", "month": $month, "day": $day}
+{"calendar": "$_cal", "year": $year , "month": $month, "day": $day}
 EOF
         )
         _keys="$_keys$_key_json,"
+
+        # special case for Chaharshanbe Soori
+        if [ "$month" -eq 12 ] && [ "$day" -ge 22 ] \
+            && [ "$_cal" = "Persian Calendar" ]; then
+            if ! ch_soori=$(jcal "$year" 12 \
+                | awk 'NR > 2 && NF >= 5 {x = $5} END {print x}'); then
+                log warn "Failed to get Chaharshanbe Soori day from jcal"
+            fi
+            ch_soori=$((ch_soori - 1))
+            if ! [ "$day" -eq "$ch_soori" ]; then
+                ch_soori=""
+            fi
+        fi
     done
     # remove last comma
     _keys=$(printf '%s' "$_keys" | sed 's/,$//')
@@ -165,11 +182,14 @@ EOF
         iso_date=$(date '+%Y-%m-%d' -d "$start_date + $offset days")
     fi
 
+    # if
+
     if ! jq --raw-output \
         --argjson keys "$_keys" \
         --arg country "$country" \
         --argjson out_json "$out_json" \
         --arg iso_date "$iso_date" \
+        --arg ch_soori "$ch_soori" \
         'def get_event(cal; m; d):
              .[cal] | map (select(.month == m and .day == d and
                                  (.type == $country or
@@ -184,9 +204,101 @@ EOF
                   then ($event.title + " (تعطیل)")
                   else $event.title end
                 end;
+
+         # Sakamoto algorithm for weekday calculation
+         # https://www.geeksforgeeks.org/dsa/tomohiko-sakamotos-algorithm-finding-day-week/
+         # https://www.reddit.com/r/programming/comments/4o0bhj/comment/d49a2m3/
+         # output: saturday->friday is mapped to  0->6
+         def day_of_week(y; m; d):
+             [ 0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4 ] as $t |
+             (if m < 3 then (y - 1) else y end) as $y2 |
+             ($y2 + (($y2 / 4) | floor) - (($y2 / 100) | floor)
+             + (($y2 / 400) | floor) + $t[m - 1] + d + 1) % 7
+             ;
+
+         def is_leap(y):
+             y % 4 == 0 and ((y % 100 != 0) or (y % 400 == 0));
+
+         # Reference: https://rosettacode.org/wiki/Last_Friday_of_each_month#jq
+         def findLastWeekday(y; m; weekday):
+           def days:
+             if m == 2 then (if is_leap(y) then 29 else 28 end)
+             else [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m-1]
+             end;
+           days
+           | until( day_of_week(y; m; .) == weekday ; .-1);
+
+         def findThirdWeekday(y; m; weekday):
+            def days:
+                if m == 2 then (if is_leap(y) then 29 else 28 end)
+                else [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m-1]
+                end;
+            {day: 1, counter: 0} |
+              until(.counter == 3 or .day > days;
+                if (day_of_week(y; m; .day) == weekday) then
+                  .counter += 1 |
+                  if .counter < 3 then .day += 1 end
+                else
+                  .day += 1
+                end
+              ) |
+              if .counter == 3 then .day else null end;
+
+         # Cariño nd algorithm
+         # https://vixra.org/pdf/1801.0408v1.pdf
+         def nth_day(y; m; d):
+            (12 * y + m - 3) as $a |
+            ($a - 10) as $b |
+            31 * m - 31 + d - (((3 * m) / 7) | floor)
+            - 2 * (((m + 7) / 10) | floor) + (($a / 48) | floor)
+            - (((y - 1) / 4) | floor) - (($a / 1200) | floor)
+            + (($b / 1200) | floor) + (($a / 4800) | floor)
+            - (($b / 4800) | floor)
+            ;
+
+         def get_irregular_event(cal; y; m; d):
+             .["Irregular Recurring"]
+                    | map (select((.calendar as $x | cal | contains($x)) and
+                                 (.type == $country or
+                                  .type == "International" or
+                                  .type == "AncientIran")))
+                    | map(select(
+                         # world leprosy day
+                         (.month == m and
+                          .weekday == 1 and (d == findLastWeekday(y; 1; 1)))
+                         or
+                         # black friday
+                         (.month == m and
+                          .weekday == 6 and (d == findLastWeekday(y; 11; 6)))
+                         or
+                         # philosopher day
+                         (.month == m and
+                          .weekday == 5 and (d == findThirdWeekday(y; 11; 5)))
+                         or
+                         # programmer day
+                         (.nth == 256 and (m == 9) and
+                           (if is_leap(y) then (d == 12) else (d == 13) end))
+                         or
+                         # chaharshanbe soori day
+                         (($ch_soori | length > 0) and .month == 12)
+                         ))
+              [] as $event
+              | if ($out_json == 1)
+                then
+                  $event + {"calendar" : cal} + {"iso_date": $iso_date}
+                else
+                  if $event.holiday
+                  then ($event.title + " (تعطیل)")
+                  else $event.title end
+                end;
+
+         # get regular events
          . as $events
          | $keys[] as $key
-         | $events | get_event($key.calendar; $key.month; $key.day)' \
+         | $events
+         | get_event($key.calendar; $key.month; $key.day)
+           ,get_irregular_event($key.calendar; $key.year; $key.month; $key.day)
+         ' \
         "$events"; then
         log error "Filtering $events failed"
         exit 1
@@ -194,7 +306,7 @@ EOF
 }
 
 # global variables
-version=0.8
+version=0.9
 data_dir="${XDG_DATA_HOME:-$HOME/.local/share}/imroo"
 events="$data_dir/events.json"
 db_link="https://github.com/persian-calendar/persian-calendar/raw/refs/heads/main/PersianCalendar/data/events.json"
@@ -269,7 +381,7 @@ fi
 
 while [ "$days" -gt 0 ]; do
     day_str=$(jdate '+%E' --jalali \
-                    "$(date '+%Y/%m/%d' -d "$start_date + $offset days")" \
+        "$(date '+%Y/%m/%d' -d "$start_date + $offset days")" \
         | awk -F '،' '{print $1}')
     printf "«%s»\n" "$day_str"
 

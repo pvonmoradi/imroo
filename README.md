@@ -100,8 +100,6 @@ Date Format (dd/mm/yyyy):
 + Output   :  2/ 7/1447 A.H  -    Ithnain(Ith) -        Rajab(Raj)
 ```
 
-- Irregular recurring events are not handled.
-
 # Development
 - linter: `shellcheck`
 - formatter: `shfmt -i 4 -bn -ci -sr`
