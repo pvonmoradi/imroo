@@ -182,8 +182,6 @@ EOF
         iso_date=$(date '+%Y-%m-%d' -d "$start_date + $offset days")
     fi
 
-    # if
-
     if ! jq --raw-output \
         --argjson keys "$_keys" \
         --arg country "$country" \
@@ -264,23 +262,25 @@ EOF
                                   .type == "AncientIran")))
                     | map(select(
                          # world leprosy day
-                         (.month == m and
+                         (.calendar =="Gregorian" and .month == m and
                           .weekday == 1 and (d == findLastWeekday(y; 1; 1)))
                          or
                          # black friday
-                         (.month == m and
+                         (.calendar =="Gregorian" and .month == m and
                           .weekday == 6 and (d == findLastWeekday(y; 11; 6)))
                          or
                          # philosopher day
-                         (.month == m and
+                         (.calendar =="Gregorian" and .month == m and
                           .weekday == 5 and (d == findThirdWeekday(y; 11; 5)))
                          or
                          # programmer day
-                         (.nth == 256 and (m == 9) and
+                         (.calendar =="Gregorian" and .nth == 256 and
+                         (m == 9) and
                            (if is_leap(y) then (d == 12) else (d == 13) end))
                          or
                          # chaharshanbe soori day
-                         (($ch_soori | length > 0) and .month == 12)
+                         (.calendar =="Persian" and
+                         ($ch_soori | length > 0) and .month == 12)
                          ))
               [] as $event
               | if ($out_json == 1)
@@ -306,7 +306,7 @@ EOF
 }
 
 # global variables
-version=0.9
+version=0.10
 data_dir="${XDG_DATA_HOME:-$HOME/.local/share}/imroo"
 events="$data_dir/events.json"
 db_link="https://github.com/persian-calendar/persian-calendar/raw/refs/heads/main/PersianCalendar/data/events.json"
